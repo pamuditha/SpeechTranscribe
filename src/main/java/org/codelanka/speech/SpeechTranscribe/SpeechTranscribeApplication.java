@@ -1,15 +1,10 @@
 package org.codelanka.speech.SpeechTranscribe;
 
+import com.google.api.gax.longrunning.OperationFuture;
+import com.google.cloud.speech.v1.*;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-import com.google.cloud.speech.v1.RecognitionAudio;
-import com.google.cloud.speech.v1.RecognitionConfig;
-import com.google.cloud.speech.v1.RecognizeRequest;
-import com.google.cloud.speech.v1.RecognizeResponse;
-import com.google.cloud.speech.v1.SpeechClient;
-import com.google.cloud.speech.v1.SpeechRecognitionAlternative;
-import com.google.cloud.speech.v1.SpeechRecognitionResult;
 import com.google.protobuf.ByteString;
 
 import java.io.FileInputStream;
@@ -25,45 +20,44 @@ import org.apache.commons.cli.Options;
 public class SpeechTranscribeApplication {
 
 
-	public static void sampleRecognize() {
+	public static void sampleLongRunningRecognize() {
 		// TODO(developer): Replace these variables before running the sample.
-		String localFilePath = "/video.mp4";
-		sampleRecognize(localFilePath);
+		String storageUri = "gs://speechtranscribe-1/Mark_Zuckerberg.mp4";
+		sampleLongRunningRecognize(storageUri);
 	}
 
 	/**
 	 * Transcribe a short audio file using an enhanced model
 	 *
-	 * @param localFilePath Path to local audio file, e.g. /path/audio.wav
+	 * @param  to local audio file, e.g. /path/audio.wav
 	 */
-	public static void sampleRecognize(String localFilePath) {
+	public static void sampleLongRunningRecognize(String storageUri) {
 
 		try (SpeechClient speechClient = SpeechClient.create()) {
 
-			// The enhanced model to use, e.g. phone_call
-			// Currently phone_call is the only model available as an enhanced model.
-			String model = "phone_call";
-
-			// Use an enhanced model for speech recognition (when set to true).
-			// Project must be eligible for requesting enhanced models.
-			// Enhanced speech models require that you opt-in to data logging.
-			boolean useEnhanced = true;
+			// Sample rate in Hertz of the audio data sent
+			int sampleRateHertz = 16000;
 
 			// The language of the supplied audio
 			String languageCode = "en-US";
+
+			// Encoding of audio data sent. This sample sets this explicitly.
+			// This field is optional for FLAC and WAV audio formats.
+			RecognitionConfig.AudioEncoding encoding = RecognitionConfig.AudioEncoding.LINEAR16;
 			RecognitionConfig config =
 					RecognitionConfig.newBuilder()
-							.setModel(model)
-							.setUseEnhanced(useEnhanced)
+							.setSampleRateHertz(sampleRateHertz)
 							.setLanguageCode(languageCode)
+							.setEncoding(encoding)
 							.build();
-			Path path = Paths.get(localFilePath);
-			byte[] data = Files.readAllBytes(path);
-			ByteString content = ByteString.copyFrom(data);
-			RecognitionAudio audio = RecognitionAudio.newBuilder().setContent(content).build();
-			RecognizeRequest request =
-					RecognizeRequest.newBuilder().setConfig(config).setAudio(audio).build();
-			RecognizeResponse response = speechClient.recognize(request);
+			RecognitionAudio audio = RecognitionAudio.newBuilder().setUri(storageUri).build();
+			LongRunningRecognizeRequest request =
+					LongRunningRecognizeRequest.newBuilder().setConfig(config).setAudio(audio).build();
+			OperationFuture<LongRunningRecognizeResponse, LongRunningRecognizeMetadata> future =
+					speechClient.longRunningRecognizeAsync(request);
+
+			System.out.println("Waiting for operation to complete...");
+			LongRunningRecognizeResponse response = future.get();
 			for (SpeechRecognitionResult result : response.getResultsList()) {
 				// First alternative is the most probable result
 				SpeechRecognitionAlternative alternative = result.getAlternativesList().get(0);
@@ -72,19 +66,6 @@ public class SpeechTranscribeApplication {
 		} catch (Exception exception) {
 			System.err.println("Failed to create the client due to: " + exception);
 		}
-	}
-	// [END speech_transcribe_enhanced_model]
-
-	public static void main(String[] args) throws Exception {
-		Options options = new Options();
-		options.addOption(
-				Option.builder("").required(false).hasArg(true).longOpt("local_file_path").build());
-
-		CommandLine cl = (new DefaultParser()).parse(options, args);
-		String localFilePath = cl.getOptionValue("local_file_path", "video.mp4");
-
-		sampleRecognize(localFilePath);
-	}
 
 
 }
