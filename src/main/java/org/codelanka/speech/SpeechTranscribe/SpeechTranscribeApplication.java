@@ -19,20 +19,12 @@ import org.apache.commons.cli.Options;
 @SpringBootApplication
 public class SpeechTranscribeApplication {
 
-
-	public static void sampleLongRunningRecognize() {
-		// TODO(developer): Replace these variables before running the sample.
-		String storageUri = "gs://speechtranscribe-1/Mark_Zuckerberg.mp4";
-		sampleLongRunningRecognize(storageUri);
-	}
-
 	/**
 	 * Transcribe a short audio file using an enhanced model
 	 *
-	 * @param  to local audio file, e.g. /path/audio.wav
+	 * @param localFilePath Path to local audio file, e.g. /path/audio.wav
 	 */
-	public static void sampleLongRunningRecognize(String storageUri) {
-
+	public static void sampleRecognize(String storageUri) {
 		try (SpeechClient speechClient = SpeechClient.create()) {
 
 			// Sample rate in Hertz of the audio data sent
@@ -66,6 +58,15 @@ public class SpeechTranscribeApplication {
 		} catch (Exception exception) {
 			System.err.println("Failed to create the client due to: " + exception);
 		}
+	}
+	// [END speech_transcribe_enhanced_model]
+
+	public static void main(String[] args) throws Exception {
+		String storageUri = "gs://speechtranscribe-1/Mark_Zuckerberg.mp4";
+		sampleRecognize(storageUri);
+
+		sampleRecognize(storageUri);
+	}
 
 
 }
